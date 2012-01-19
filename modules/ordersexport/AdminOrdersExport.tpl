@@ -23,6 +23,7 @@
         {/foreach}
       </select>
     </p>
+    <label class="clear">{l s='Choose your type:' mod='ordersexport'}</label>
     <p class="margin-form">
       <input type="radio" name="export_type" value="supplier" id="type_supplier" checked="checked" />
       <label for="type_supplier" class="t">{l s='Supplier' mod='ordersexport'}</label>
@@ -32,6 +33,14 @@
       <br />
       <input type="radio" name="export_type" value="admin" id="type_admin" />
       <label for="type_admin" class="t">{l s='Admin' mod='ordersexport'}</label>
+    </p>
+    <label for="order_state" class="clear">{l s='Choose orders state:' mod='ordersexport'}</label>
+    <p class="margin-form">
+      <select name="order_state" id="order_state">
+        {foreach from=$order_states item=state}
+        <option value="{$state['id_order_state']}">{$state['name']}</option>
+        {/foreach}
+      </select>
     </p>
     <p class="margin-form">
       <input type="submit" value="{l s='Download' mod='ordersexport'}" name="submitExportFormat" class="button" />

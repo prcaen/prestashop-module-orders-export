@@ -1,271 +1,44 @@
 <?php
-include_once('ExportToCSV.php');
+include_once('classes/ExportToCSV.class.php');
+include_once('classes/LoaderTool.class.php');
+require_once('Spreadsheet/Excel/Writer.php');
+
 class AdminOrdersExport extends AdminTab
 {
-  private $currencySign;
+  private $_tpl;
+
+  private $_dirName;
+  private $_fileName;
+  private $_file;
+
+  private $_currency;
+
   public function __construct()
   {
    global $cookie;
    
    $this->table     = 'orders';
 	 $this->className = 'Order';
+	 $this->_tpl      = dirname(__FILE__) . '/AdminOrdersExport.tpl';
 	 
 	 parent::__construct();
 	 
-	 $this->file      = 'export_orders_';
-	 $this->dir       = dirname(__FILE__) . '/exports/';
-	 
-	 $this->fileXLS   = $this->file . '.xls';
-   $this->dirCSV    = $this->dir . 'csv/';
-   $this->dirXLS    = $this->dir . 'xls/';
-   
-   $this->tpl       = dirname(__FILE__) . '/AdminOrdersExport.tpl';
-   
-   $this->currency = new Currency(Configuration::get('PS_CURRENCY_DEFAULT'));
-   $this->_currencySign = $this->currency->getSign();
+	 $this->_dirName  = dirname(__FILE__) . '/exports/';
+	 $this->_fileName = $this->l('export_orders_');
 
-	 $this->sql = array(
-	   'select' => array(
-	     'o' => array(
-	        'n' => 'orders',
-	        'f' => array(
-	        array(
-	          'n' => 'id_order',
-	          'l' => 'Order reference',
-	          'supplier' => false,
-	          'carrier'  => true
-	        ),
-	        array(
-	          'n' => 'date_add',
-	          'l' => 'Date',
-	          'supplier' => false,
-	          'carrier'  => true
-	        )
-	      )),
-	      'm'  => array(
-	        'n' => 'manufacturer',
-	        'f' => array(
-	          array(
-	          'n' => 'name',
-	          'l' => 'Manufacturer',
-	          'supplier' => true,
-	          'carrier'  => true
-	        ))
-	      ),
-	      'od' => array(
-	        'n' => 'order_detail',
-	        'f' => array(
-	          array(
-	          'n' => 'product_name',
-	          'l' => 'Product name',
-	          'supplier' => true,
-	          'carrier'  => true
-	        ),
-	        array(
-	          'n' => 'product_quantity',
-	          'l' => 'Quantity',
-	          'supplier' => true,
-	          'carrier'  => true
-	        ),
-	        array(
-	          'n' => 'product_price',
-	          'l' => 'ET unit cost' . ' (' . $this->_currencySign . ')',
-	          'supplier' => false,
-	          'carrier'  => true
-	        ))
-	      ),
-	      'ads' => array(
-	        'n' => 'address',
-	        'f' => array(
-	        array(
-	          'n' => 'lastname',
-	          'l' => 'Delivery lastname',
-	          'supplier' => false,
-	          'carrier'  => true
-	        ),
-	        array(
-	          'n' => 'firstname',
-	          'l' => 'Delivery firstname',
-	          'supplier' => false,
-	          'carrier'  => true
-	        ),
-	        array(
-	          'n' => 'address1',
-	          'l' => 'Delivery address',
-	          'supplier' => false,
-	          'carrier'  => true
-	        ),
- 	        array(
- 	          'n' => 'postcode',
- 	          'l' => 'Delivery zip code',
-	          'supplier' => false,
-	          'carrier'  => true
- 	        ),
- 	        array(
- 	          'n' => 'city',
- 	          'l' => 'Delivery city',
-	          'supplier' => false,
-	          'carrier'  => true
- 	        ))
-	      ),
-	      'cld' => array(
-	        'n' => 'country_lang',
-	        'f' => array(
-	          array(
-	          'n' => 'name',
-	          'l' => 'Delivery country',
-	          'supplier' => false,
-	          'carrier'  => true
-	        ))
-	      ),
-	      'adi' => array(
-	        'n' => 'address',
-	        'f' => array(
-	          array(
-	          'n' => 'lastname',
-	          'l' => 'Invoice lastname',
-	          'supplier' => false,
-	          'carrier'  => true
-	        ),
-	        array(
-	          'n' => 'firstname',
-	          'l' => 'Invoice firstname',
-	          'supplier' => false,
-	          'carrier'  => true
-	        ),
-	        array(
-	          'n' => 'address1',
-	          'l' => 'Invoice address',
-	          'supplier' => false,
-	          'carrier'  => true
-	        ),
- 	        array(
- 	          'n' => 'postcode',
- 	          'l' => 'Invoice zip code',
-	          'supplier' => false,
-	          'carrier'  => true
- 	        ),
- 	        array(
- 	          'n' => 'city',
- 	          'l' => 'Invoice city',
-	          'supplier' => false,
-	          'carrier'  => true
- 	        ))
-	      ),
-	      'cli' => array(
-	        'n' => 'country_lang',
-	        'f' => array(
-	          array(
-	          'n' => 'name',
-	          'l' => 'Invoice country',
-	          'supplier' => false,
-	          'carrier'  => true
-	        ))
-	      ),
-	      'u' => array(
-	       'n' => 'customer',
-	       'f' => array(
-	         array(
-	         'n' => 'email',
-	         'l' => 'Email',
-	         'supplier' => false,
-	         'carrier'  => true
-	       )
-	       )
-	      )
-	    ),
-	    'join' => array(
-	      'od' => array(
-	       'n' => 'order_detail',
-	       'j' => 'o',
-	        1  => 'id_order',
-	        2  => 'id_order'
-	      ),
-	      'p' => array(
-	       'n' => 'product',
-	       'j' => 'od',
-	        1  => 'id_product',
-	        2  => 'product_id',
-	      ),
-	      'm' => array(
-	       'n' => 'manufacturer',
-	       'j' => 'p',
-	        1  => 'id_manufacturer',
-	        2  => 'id_manufacturer',
-	      ),
-	      'u' => array(
-	       'n' => 'customer',
-	       'j' => 'o',
-	        1  => 'id_customer',
-	        2  => 'id_customer',
-	      ),
-	      'ads' => array(
-	       'n' => 'address',
-	       'j' => 'o',
-	        1  => 'id_address',
-	        2  => 'id_address_delivery',
-	      ),
-	      'adi' => array(
-	       'n' => 'address',
-	       'j' => 'o',
-	        1  => 'id_address',
-	        2  => 'id_address_invoice',
-	      ),
-	      'cli' => array(
-	       'n' => 'country_lang',
-	       'j' => 'adi',
-	        1  => 'id_country',
-	        2  => 'id_country',
-	      ),
-	      'cld' => array(
-	       'n' => 'country_lang',
-	       'j' => 'ads',
-	        1  => 'id_country',
-	        2  => 'id_country',
-	      ),
-	      'a' => array(
-	       'n' => 'attribute',
-	       'j' => 'od',
-	        1  => 'id_attribute',
-	        2  => 'product_attribute_id',
-	      ),
-	      'al' => array(
-	       'n' => 'attribute_lang',
-	       'j' => 'a',
-	        1  => 'id_attribute',
-	        2  => 'id_attribute',
-	      )
-	    ),
-	    'from'  => '`' . _DB_PREFIX_ . $this->table . '` o',
-	    'where' => array(
-	     '1' => '1'
-	    )
-	  );
+   $this->_currency = new Currency(Configuration::get('PS_CURRENCY_DEFAULT'));
   }
   
   public function display()
   {
     global $smarty, $cookie, $currentIndex;
-    
-    // Date
-    $dates = array();
-    $d = $this->_getDateInstall();
-    while($d < time())
-    {
-      $dates[] = array(
-        'timestamp' => $d,
-        'display'   => Tools::displayDate(date('Y-m-d H:i:s', $d), (int)$cookie->id_lang, false)
-      );
 
-      $d += 7 * 24 * 60 * 60;
-    }
-    //echo $this->_getResultAdmin();
     $this->_postProcess();
     $smarty->assign('request_uri', Tools::safeOutput($_SERVER['REQUEST_URI']));
-    $smarty->assign('dates', $dates);
+    $smarty->assign('dates', $this->_getDateForExport());
     $smarty->assign('order_states', $this->_getOrderStates());
     
-    echo $smarty->display($this->tpl);
+    echo $smarty->display($this->_tpl);
   }
 
   private function _postProcess()
@@ -274,173 +47,172 @@ class AdminOrdersExport extends AdminTab
 
     if (Tools::isSubmit('submitExportFormat'))
 		{
-		  $fields = array();
-		  $joins  = array();
-		  $where  = array();
-		  $titles = array();
-
-      $currency = new Currency(Configuration::get('PS_CURRENCY_DEFAULT'));
-    
-		  foreach($this->sql AS $type => $data)
-		  {
-		    if($type == 'select')
-		    {
-		      foreach($data AS $prefix => $table)
-		      {
-		        foreach($table AS $col => $value)
-		        {
-		          if($col == 'f')
-		          {
-		            foreach($value as $val)
-		            {
-		              $titles[] = $val['l'];
-		              if($val['n'] == 'product_price')
-		              {
-		                $titles[] = $this->l('ATI unit cost') . ' (' . $this->_currencySign . ')';
-		                $titles[] = $this->l('ET cost') . ' (' . $this->_currencySign . ')';
-		                $titles[] = $this->l('ATI cost') . ' (' . $this->_currencySign . ')';
-		              }
-		              $fields[] = $prefix . '.' . '`' . $val['n'] . '` AS `' . $val['l'] . '`';
-		              if($val['n'] == 'product_price')
-		              {
-                    $fields[] = '(od.`product_price` * ((100 + (od.`tax_rate`))/100)) AS `'. $this->l('ATI unit cost') . ' (' . $this->_currencySign . ')' . '`';
-                    $fields[] = '(od.`product_price` * od.`product_quantity`) AS `' . $this->l('ET cost') . ' (' . $this->_currencySign . ')' . '`';
-                    $fields[] = '(od.`product_price` * ((100 + (od.`tax_rate`))/100) * od.`product_quantity`) AS `' . $this->l('ATI cost') . ' (' . $this->_currencySign . ')' . '`';
-                  }
-	              }
-		          }
-		        }
-		      }
-		    }
-		    elseif($type == 'join')
-		    {
-		      foreach($data AS $prefix => $join)
-		        $joins[] = 'LEFT JOIN `' . _DB_PREFIX_ . $join['n'] . '` ' . $prefix . ' ON (' . $prefix . '.`' . $join[1] . '` = '. $join['j'] . '.`' . $join[2] . '`' . (substr($join['n'], -5) == '_lang' ? ' AND ' . $prefix . '.`id_lang` = ' . (int)$cookie->id_lang : '') . ')';
-		      
-		      $joins[] = 'LEFT JOIN `'._DB_PREFIX_.'tax_rule` tr ON (p.`id_tax_rules_group` = tr.`id_tax_rules_group` AND tr.`id_country` = '.(int)Country::getDefaultCountryId().' AND tr.`id_state` = 0)';
-		      $joins[] = 'LEFT JOIN `'._DB_PREFIX_.'tax` t ON (t.`id_tax` = tr.`id_tax`)';
-		    }
-		    elseif($type == 'where')
-		    {
-		      foreach($data AS $key => $val)
-		        $where[] = $key . ' = ' . $val;
-		    }
-		  }
-
-		  $fields = implode(', ', $fields);
-		  $joins  = implode(' ', $joins);
-		  $where  = implode(' AND ', $where);
-		  $from   = $this->sql['from'];
-
-		  $sql = "SELECT " . $fields . " FROM " . $from . " " . $joins . " WHERE " . $where;
-
-      $dateS     = (int)Tools::getValue('date');
-      $dateE     = $dateS + (7 * 24 * 60 * 60);
-      $dateStart = date('Y-m-d H:i:s', $dateS);
-      $dateEnd   = date('Y-m-d H:i:s', $dateE);
+      $timestampS = (int)Tools::getValue('date');
+      $timestampE = $timestampS + $this->_weekToSeconds();
+      $dateStart  = date('Y-m-d H:i:s', $timestampS);
+      $dateEnd    = date('Y-m-d H:i:s', $timestampE);
       
       if(Tools::getValue('export_type') == 'admin')
 		  {
 		    $results = $this->_getResultAdmin($dateStart, $dateEnd, (int)Tools::getValue('order_state'));
 		    $titles  = $this->_getTitlesAdmin($results);
-		    $type    = 'admin';
+		    $type    = $this->l('admin');
+		    $dirType = 'admin/';
       }
       elseif(Tools::getValue('export_type') == 'supplier')
       {
 		    $results = $this->_getResultSupplier($dateStart, $dateEnd);
 		    $titles  = $this->_getTitlesSupplier($results);
-		    $type    = 'supplier';
+		    $type    = $this->l('supplier');
+		    $dirType = 'supplier/';
       }
       elseif(Tools::getValue('export_type') == 'carrier')
       {
 		    $results = $this->_getResultCarrier($dateStart, $dateEnd, (int)Tools::getValue('order_state'));
 		    $titles  = $this->_getTitlesCarrier($results);
-		    $type    = 'carrier';
+		    $type    = $this->l('carrier');
+		    $dirType = 'carrier/';
       }
       else
       {
-        // error
+        $smarty->assign('errors', $this->l('Error: You have not select an export type').' '. $this->_fileName);
+        return false;
       }
-
-      $dir = $type . '/';
-      // --- CSV ---
+      
       if(Tools::getValue('export_format') == 'csv')
 		  {
-		    $this->fileCSV = $this->file . $type . '_' . date('Y-m-d', $dateS) . '_' . date('Y-m-d', $dateE) . '.csv';
+		    // --- CSV ---
+		    $this->_dirName  .= 'csv/' . $dirType;
+		    $this->_fileName .= $type . '_' . date('Y-m-d', $timestampS) . '_' . date('Y-m-d', $timestampE) . '.csv';
+		    $this->_file      = $this->_dirName . $this->_fileName;
 
-		    $results = (is_array($results) ? array_merge(array($titles), $results) : $titles);
-		    $exportCSV = new ExportToCSV($this->fileCSV, $this->dirCSV . $dir, ',', '"');
+		    $datas = (is_array($results) ? array_merge(array($titles), $results) : $titles);
+		    $exportCSV = new ExportToCSV($this->_fileName, $this->_dirName, ',', '"');
 		    
 		    if(!$exportCSV->open())
 		    {
-          $smarty->assign('errors', $this->l('Error: cannot write').' '. $this->fileCSV);
+          $smarty->assign('errors', $this->l('Error: cannot write').' '. $this->_fileName);
           return false;
         }
-		    foreach($results AS $result)
-		      $exportCSV->setContent($result);
+		      
+		    $exportCSV->setContent($datas);
 
-		    if($exportCSV->output())
+		    if($exportCSV->close())
 		    {
 		      $smarty->assign('confirm', $this->l('The CSV file has been successfully exported'));
-		      Tools::redirect('modules/ordersexport/exports/csv/' . $dir . $this->fileCSV);
-		      
+		      LoaderTool::downloadContent($this->_file, $this->_fileName, false, 'text/csv');
+
 		      return true; 
 		    }
 		    else
 		    {
-          $smarty->assign('errors', $this->l('Error: An error as occured').' '. $this->fileCSV);
+          $smarty->assign('errors', $this->l('Error: An error as occured').' '. $this->_fileName);
           return false;
         }
 		  }
 		  elseif(Tools::getValue('export_format') == 'xls')
 		  {
-		    $content  = '';
-		    $content .= '<table>';
-		    $content .= ' <tr>';
-		    foreach($titles as $title)
-		      $content .= '   <th>' . $title . '</th>';
-		    $content .= ' </tr>';
-		    $content .= ' <tr>';
-		    foreach($titles as $title)
-		      $content .= '   <td>' . $title . '</td>';
-		    $content .= ' </tr>';
-		    $content .= '</table>';
+		    // --- XLS --- 
+		    $this->_dirName  .= 'xls/' . $dirType;
+		    $this->_fileName .= $type . '_' . date('Y-m-d', $timestampS) . '_' . date('Y-m-d', $timestampE) . '.xls';
+		    $this->_file      = $this->_dirName . $this->_fileName;
 
-		    fwrite($file, $content);
+		    $datas = (is_array($results) ? array_merge(array($titles), $results) : $titles);
+
+        // Creating workbook
+        $workbook = new Spreadsheet_Excel_Writer($this->_file);
+        $workbook->setVersion(8);
+        
+        if (PEAR::isError($worksheet)) {
+          $smarty->assign('errors', $this->l('Error: cannot write').' '. $this->_fileName);
+          return false;
+        }
+
+        // Adding worksheet
+        $worksheet =& $workbook->addWorksheet($type . '_' . date('Y-m-d', $timestampS));
+        $worksheet->setColumn(0,count($titles) - 1, 33);
+        $worksheet->setRow(0,16);
+        $worksheet->setInputEncoding('utf-8');
+
+        // Set title format
+        $format_title =& $workbook->addFormat();
+        $format_title->setBold();
+        $format_title->setPattern(1);
+        $format_title->setFgColor(22);
+        $format_title->setAlign('center');
+        $format_title->setAlign('vcenter');
+
+        // Data input - Header
+        foreach($titles as $key => $title)
+          $worksheet->write(0, $key, $title, $format_title);
+
+        // Data input - Content
+        foreach($results as $key => $product)
+        {
+          $keyRow = 0;
+          foreach($product as $val)
+          {
+            $worksheet->write($key + 1, $keyRow, $val);
+            $keyRow++;
+          }
+        }
+        // Saving file
+        if($workbook->close())
+        {
+		      $smarty->assign('confirm', $this->l('The XLS file has been successfully exported'));
+		      LoaderTool::downloadContent($this->_file, $this->_fileName, false, 'application/vnd.ms-excel');
+
+		      return true; 
+		    }
+		    else
+		    {
+          $smarty->assign('errors', $this->l('Error: An error as occured').' '. $this->_fileName);
+          return false;
+        }
 		  }
-		  
-		  // --- XLS --- 
 	  }
   }
-  
-  private function _getDateInstall()
-  {
-    $sql = "SELECT date_add FROM `" . _DB_PREFIX_ . "configuration` WHERE name = 'PS_SHOP_NAME'";
-    
-    $dateInstall = Db::getInstance()->getValue($sql);
-    return strtotime('midnight', strtotime($dateInstall));
-  }
-  
-  private function _getOrderStates()
-  {
-    global $cookie;
-    $sql = "SELECT osl.`id_order_state`, osl.`name` FROM `order_state_lang` osl WHERE osl.`id_lang` = " . (int)$cookie->id_lang;
-    
-    $results = Db::getInstance()->ExecuteS($sql);
-    array_unshift($results, array('id_order_state' => 0, 'name' => $this->l('All')));
 
-    return $results;
-  }
-  
-  private function _getGroupAttributes()
+  // --- FOR ADMIN ---
+  private function _getTitlesAdmin($results)
   {
-    global $cookie;
+    $titles = array(
+      $this->l('Order reference'),
+      $this->l('Product n°/Total products'),
+      $this->l('Date'),
+      $this->l('Product reference'),
+      $this->l('Manufacturer'),
+      $this->l('Product name')
+    );
 
-    $sql = "SELECT agl.`id_attribute_group`, agl.`name` FROM `" . _DB_PREFIX_ . "attribute_group_lang` agl WHERE agl.`id_lang` = " . (int)$cookie->id_lang;
+    foreach($this->_getGroupAttributes() AS $att)
+        $titles[] = $att['name'];
+
+    array_push($titles,
+      $this->l('Weight'),
+      $this->l('Quantity'),
+      $this->l('ET unit cost') . ' (' . $this->_currency->getSign() . ')',
+      $this->l('ATI unit cost') . ' (' . $this->_currency->getSign() . ')',
+      $this->l('ET cost') . ' (' . $this->_currency->getSign() . ')',
+      $this->l('ATI cost') . ' (' . $this->_currency->getSign() . ')',
+      $this->l('Delivery lastname'),
+      $this->l('Delivery firstname'),
+      $this->l('Delivery address'),
+      $this->l('Delivery zip code'),
+      $this->l('Delivery city'),
+      $this->l('Delivery country'),
+      $this->l('Invoice lastname'),
+      $this->l('Invoice firstname'),
+      $this->l('Invoice address'),
+      $this->l('Invoice zip code'),
+      $this->l('Invoice city'),
+      $this->l('Invoice country'),
+      $this->l('Email'),
+      $this->l('Order state'));
     
-    return Db::getInstance()->ExecuteS($sql);
+    return $titles;
   }
-  
+
   private function _getResultAdmin($dateStart, $dateEnd, $orderState)
   {
     global $cookie;
@@ -513,7 +285,7 @@ class AdminOrdersExport extends AdminTab
       foreach($result as $key => $val)
       {
         if($key == 'et_unit_cost' || $key == 'ati_unit_cost' || $key == 'et_cost' || $key == 'ati_cost')
-          $datas[$n][$key] = Tools::displayPrice($val, $this->currency, false);
+          $datas[$n][$key] = Tools::displayPrice($val, $this->_currency, false);
         elseif($key == 'o.date_add')
           $datas[$n][$key] = Tools::displayDate($val, (int)$cookie->id_lang, false);
         elseif($key == 'nb_product')
@@ -546,7 +318,47 @@ class AdminOrdersExport extends AdminTab
 
     return $datas;
   }
-  
+
+  // --- FOR CARRIER ---
+  private function _getTitlesCarrier($results)
+  {
+    $titles = array(
+      $this->l('Order reference'),
+      $this->l('Product n°/Total products'),
+      $this->l('Date'),
+      $this->l('Product reference'),
+      $this->l('Manufacturer'),
+      $this->l('Product name')
+    );
+
+    foreach($this->_getGroupAttributes() AS $att)
+        $titles[] = $att['name'];
+
+    array_push($titles,
+      $this->l('Weight'),
+      $this->l('Quantity'),
+      $this->l('ET unit cost') . ' (' . $this->_currency->getSign() . ')',
+      $this->l('ATI unit cost') . ' (' . $this->_currency->getSign() . ')',
+      $this->l('ET cost') . ' (' . $this->_currency->getSign() . ')',
+      $this->l('ATI cost') . ' (' . $this->_currency->getSign() . ')',
+      $this->l('Delivery lastname'),
+      $this->l('Delivery firstname'),
+      $this->l('Delivery address'),
+      $this->l('Delivery zip code'),
+      $this->l('Delivery city'),
+      $this->l('Delivery country'),
+      $this->l('Invoice lastname'),
+      $this->l('Invoice firstname'),
+      $this->l('Invoice address'),
+      $this->l('Invoice zip code'),
+      $this->l('Invoice city'),
+      $this->l('Invoice country'),
+      $this->l('Email')
+    );
+    
+    return $titles;
+  }
+
   private function _getResultCarrier($dateStart, $dateEnd, $orderState)
   {
     global $cookie;
@@ -618,7 +430,7 @@ class AdminOrdersExport extends AdminTab
       foreach($result as $key => $val)
       {
         if($key == 'et_unit_cost' || $key == 'ati_unit_cost' || $key == 'et_cost' || $key == 'ati_cost')
-          $datas[$n][$key] = Tools::displayPrice($val, $this->currency, false);
+          $datas[$n][$key] = Tools::displayPrice($val, $this->_currency, false);
         elseif($key == 'o.date_add')
           $datas[$n][$key] = Tools::displayDate($val, (int)$cookie->id_lang, false);
         elseif($key == 'nb_product')
@@ -651,7 +463,27 @@ class AdminOrdersExport extends AdminTab
 
     return $datas;
   }
-  
+
+  // --- FOR SUPPLIER ---
+  private function _getTitlesSupplier($results)
+  {
+    $titles = array(
+      $this->l('Date'),
+      $this->l('Manufacturer'),
+      $this->l('Product reference'),
+      $this->l('Product name')
+    );
+
+    foreach($this->_getGroupAttributes() AS $att)
+        $titles[] = $att['name'];
+
+    array_push($titles,
+      $this->l('Quantity')
+    );
+    
+    return $titles;
+  }
+
   private function _getResultSupplier($dateStart, $dateEnd)
   {
     global $cookie;
@@ -711,102 +543,33 @@ class AdminOrdersExport extends AdminTab
 
     return $datas;
   }
-  
-  private function _getTitlesAdmin($results)
+
+  private function _getDateInstall()
   {
-    $titles = array(
-      $this->l('Order reference'),
-      $this->l('Product n°/Total products'),
-      $this->l('Date'),
-      $this->l('Product reference'),
-      $this->l('Manufacturer'),
-      $this->l('Product name')
-    );
-
-    foreach($this->_getGroupAttributes() AS $att)
-        $titles[] = $att['name'];
-
-    array_push($titles,
-      $this->l('Weight'),
-      $this->l('Quantity'),
-      $this->l('ET unit cost') . ' (' . $this->_currencySign . ')',
-      $this->l('ATI unit cost') . ' (' . $this->_currencySign . ')',
-      $this->l('ET cost') . ' (' . $this->_currencySign . ')',
-      $this->l('ATI cost') . ' (' . $this->_currencySign . ')',
-      $this->l('Delivery lastname'),
-      $this->l('Delivery firstname'),
-      $this->l('Delivery address'),
-      $this->l('Delivery zip code'),
-      $this->l('Delivery city'),
-      $this->l('Delivery country'),
-      $this->l('Invoice lastname'),
-      $this->l('Invoice firstname'),
-      $this->l('Invoice address'),
-      $this->l('Invoice zip code'),
-      $this->l('Invoice city'),
-      $this->l('Invoice country'),
-      $this->l('Email'),
-      $this->l('Order state'));
+    $sql = "SELECT date_add FROM `" . _DB_PREFIX_ . "configuration` WHERE name = 'PS_SHOP_NAME'";
     
-    return $titles;
+    $dateInstall = Db::getInstance()->getValue($sql);
+    return strtotime('midnight', strtotime($dateInstall));
   }
-  
-  private function _getTitlesCarrier($results)
+
+  private function _getOrderStates()
   {
-    $titles = array(
-      $this->l('Order reference'),
-      $this->l('Product n°/Total products'),
-      $this->l('Date'),
-      $this->l('Product reference'),
-      $this->l('Manufacturer'),
-      $this->l('Product name')
-    );
-
-    foreach($this->_getGroupAttributes() AS $att)
-        $titles[] = $att['name'];
-
-    array_push($titles,
-      $this->l('Weight'),
-      $this->l('Quantity'),
-      $this->l('ET unit cost') . ' (' . $this->_currencySign . ')',
-      $this->l('ATI unit cost') . ' (' . $this->_currencySign . ')',
-      $this->l('ET cost') . ' (' . $this->_currencySign . ')',
-      $this->l('ATI cost') . ' (' . $this->_currencySign . ')',
-      $this->l('Delivery lastname'),
-      $this->l('Delivery firstname'),
-      $this->l('Delivery address'),
-      $this->l('Delivery zip code'),
-      $this->l('Delivery city'),
-      $this->l('Delivery country'),
-      $this->l('Invoice lastname'),
-      $this->l('Invoice firstname'),
-      $this->l('Invoice address'),
-      $this->l('Invoice zip code'),
-      $this->l('Invoice city'),
-      $this->l('Invoice country'),
-      $this->l('Email')
-    );
+    global $cookie;
+    $sql = "SELECT osl.`id_order_state`, osl.`name` FROM `order_state_lang` osl WHERE osl.`id_lang` = " . (int)$cookie->id_lang;
     
-    return $titles;
+    $results = Db::getInstance()->ExecuteS($sql);
+    array_unshift($results, array('id_order_state' => 0, 'name' => $this->l('All')));
+
+    return $results;
   }
-  
-  private function _getTitlesSupplier($results)
+
+  private function _getGroupAttributes()
   {
-    $titles = array(
-      $this->l('Date'),
-      $this->l('Manufacturer'),
-      $this->l('Product reference'),
-      $this->l('Product name')
-    );
+    global $cookie;
 
-    foreach($this->_getGroupAttributes() AS $att)
-        $titles[] = $att['name'];
-
-    array_push($titles,
-      $this->l('Quantity')
-    );
+    $sql = "SELECT agl.`id_attribute_group`, agl.`name` FROM `" . _DB_PREFIX_ . "attribute_group_lang` agl WHERE agl.`id_lang` = " . (int)$cookie->id_lang;
     
-    return $titles;
+    return Db::getInstance()->ExecuteS($sql);
   }
 
   private function _getFeatureArray($array)
@@ -814,8 +577,32 @@ class AdminOrdersExport extends AdminTab
     for ($i=1; $i <= count($this->_getGroupAttributes()); $i++) { 
       $array['feature_'. $i] = '';
     }
-    
+
     return $array;
+  }
+
+  // --- Tools ---
+  private function _weekToSeconds()
+  {
+    return 7 * 24 * 60 * 60;
+  }
+
+  private function _getDateForExport()
+  {
+    global $cookie;
+    $dates = array();
+    $d = $this->_getDateInstall();
+    while($d < time())
+    {
+      $dates[] = array(
+        'timestamp' => $d,
+        'display'   => Tools::displayDate(date('Y-m-d H:i:s', $d), (int)$cookie->id_lang, false)
+      );
+
+      $d += $this->_weekToSeconds();
+    }
+
+    return $dates;
   }
 }
 ?>

@@ -2,6 +2,23 @@
 .DS_Store
 profile
 
+#CSV
+exports/csv/admin/*
+!exports/csv/admin/index.php
+exports/csv/carrier/*
+!exports/csv/carrier/index.php
+exports/csv/supplier/*
+!exports/csv/supplier/index.php
+
+#XLS
+exports/xls/admin/*
+!exports/xls/admin/index.php
+exports/xls/carrier/*
+!exports/xls/carrier/index.php
+exports/xls/supplier/*
+!exports/xls/supplier/index.php
+
+
 # svn & cvs
 .svn
 CVS

@@ -37,6 +37,8 @@ $_MODULE['<{ordersexport}prestashop>adminordersexport_ef796f57370def648248c174ef
 $_MODULE['<{ordersexport}prestashop>adminordersexport_4732e2a83c86373c68381b286d3ea054'] = 'Facturation : Pays';
 $_MODULE['<{ordersexport}prestashop>adminordersexport_ce8ae9da5b7cd6c3df2929543a9af92d'] = 'Courriel';
 $_MODULE['<{ordersexport}prestashop>adminordersexport_d02bbc3cb147c272b0445ac5ca7d1a36'] = 'Statut de la commande';
+$_MODULE['<{ordersexport}prestashop>adminordersexport_266f4b07b6a32bb13897ed4cf1882d35'] = 'Cadeau';
+$_MODULE['<{ordersexport}prestashop>adminordersexport_0fe067d5d05655a4c80602c1d6e7d0c5'] = 'Message (cadeau)';
 $_MODULE['<{ordersexport}prestashop>adminordersexport_b1c94ca2fbc3e78fc30069c8d0f01680'] = 'Tout';
 $_MODULE['<{ordersexport}prestashop>adminordersexport_70dc01a5a40b08a44e5d5aa1924b6ad8'] = 'Export des commandes';
 $_MODULE['<{ordersexport}prestashop>adminordersexport_44160e09f3f64c3267642b41e22af76e'] = 'Choisir le format d\'export :';
